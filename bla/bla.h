@@ -43,9 +43,6 @@ extern "C"
 {
 #endif
 
-#ifndef BLA_NO_PRINT
-#include <stdio.h>
-#endif
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
@@ -81,13 +78,14 @@ extern "C"
 #define MILLION(n) ((n) * 1000000)
 #define BILLION(n) ((n) * 1000000000LL)
 
-#define __DEF_BLA_MATRIX(COLUMNS, ROWS) \
-    typedef float mat##COLUMNS##ROWS __attribute__((matrix_type((COLUMNS), (ROWS))));
-
 #define __BLA_TYPES \
     X(2)            \
     X(3)            \
     X(4)
+
+#ifndef BLA_NO_MATRICES
+#define __DEF_BLA_MATRIX(COLUMNS, ROWS) \
+    typedef float mat##COLUMNS##ROWS __attribute__((matrix_type((COLUMNS), (ROWS))));
 
 #define X(N)                           \
     __DEF_BLA_MATRIX(N, N)             \
@@ -98,6 +96,7 @@ extern "C"
     mat##N Mat##N(void);
     __BLA_TYPES
 #undef X
+#endif
 
 #define __DEF_BLA_VECTOR(SIZE) \
     typedef float vec##SIZE __attribute__((ext_vector_type(SIZE)));
@@ -197,6 +196,7 @@ quat quat_from_euler(float pitch, float yaw, float roll);
 vec3 quat_to_euler(quat q);
 int quat_cmp(quat p, quat q);
 
+#ifndef BLA_NO_MATRICES
 vec3 vec3_transform(vec3 v, mat4 mat);
 vec3 vec3_unproject(vec3 source, mat4 projection, mat4 view);
 float mat4_determinant(mat4 mat);
@@ -212,8 +212,9 @@ mat4 mat4_scale(vec3 scale);
 mat4 frustum(float left, float right, float bottom, float top, float near, float far);
 mat4 perspective(float fovY, float aspect, float nearPlane, float farPlane);
 mat4 ortho(float left, float right, float bottom, float top, float nearPlane, float farPlane);
+#endif
 
-typedef enum {
+enum bla_easing_fn {
     BLA_EASING_LINEAR = 0,
     BLA_EASING_SINE,
     BLA_EASING_CIRCULAR,
@@ -223,15 +224,15 @@ typedef enum {
     BLA_EASING_BACK,
     BLA_EASING_BOUNCE,
     BLA_EASING_ELASTIC
-} bla_easing_fn;
+};
 
-typedef enum {
+enum bla_easing_t {
     EASE_IN = 1,
     EASE_OUT,
     EASE_INOUT
-} bla_easing_t;
+};
 
-float easing(bla_easing_fn fn, bla_easing_t, float t, float b, float c, float d);
+float easing(enum bla_easing_fn fn, enum bla_easing_t, float t, float b, float c, float d);
 
 #if defined(__cplusplus)
 }
@@ -532,6 +533,7 @@ vec3 vec3_unproject(vec3 source, mat4 projection, mat4 view) {
     };
 }
 
+#ifndef BLA_NO_MATRICES
 vec3 vec3_transform(vec3 v, mat4 mat) {
     return (vec3) {
         mat[0][0]*v.x + mat[0][1]*v.y + mat[0][2]*v.z + mat[0][3],
@@ -789,6 +791,7 @@ mat4 lookat(vec3 eye, vec3 target, vec3 up) {
     result[3][3] = 1.0f;
     return result;
 }
+#endif
 
 static float ease_linear_None(float t, float b, float c, float d) {
     return (c * t / d + b);
@@ -985,7 +988,7 @@ static float ease_elastic_inout(float t, float b, float c, float d) {
     return (postFix * sinf((t * d - s) * (2.0f * PI) / p) * 0.5f + c + b);
 }
 
-float easing(bla_easing_fn fn, bla_easing_t type, float t, float b, float c, float d) {
+float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, float c, float d) {
     switch (fn) {
         default:
         case BLA_EASING_LINEAR:
