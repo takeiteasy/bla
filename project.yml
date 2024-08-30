@@ -1,0 +1,24 @@
+name: bla
+
+options:
+  bundleIdPrefix: io.github.takeiteasy
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "14.0"
+
+settings:
+  GCC_C_LANGUAGE_STANDARD: c11
+  CLANG_WARN_DOCUMENTATION_COMMENTS: false
+
+targets:
+  bla:
+    type: tool
+    platform: macOS
+    sources:
+        - path: bla/
+        - path: tests/
+        - path: README.md
+        - path: project.yml
+        - path: Makefile
+    settings:
+        OTHER_CFLAGS: [-fenable-matrix]
