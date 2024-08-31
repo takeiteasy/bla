@@ -44,6 +44,12 @@ bla relies on the clang+gcc language extensions to work. Please check if your co
 
 For matrices to work you will need to pass the `-fenable-matrix` opt. If you don't want to do that define `BLA_NO_MATRICES` before including.
 
+## TODO
+
+- [ ] Create some actual tests
+- [ ] Basic Makefile
+- [ ] Documentation
+
 ## Acknowledgements
 
 - Most of the matrix + vector functions, as well as the easing functions were all hand ported from [raymath.h](https://github.com/raysan5/raylib/blob/master/src/raymath.h)
