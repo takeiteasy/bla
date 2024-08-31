@@ -1,7 +1,7 @@
 /* bla.h -- Basic Linear Algebra library
  https://github.com/takeiteasy/bla
 
- Some functionality relies on Clang + GCC extensions.
+ Functionality relies on Clang + GCC extensions.
  When building `-fenable-matrix` for Matrix support.
  To disable Matrix support define `BLA_NO_MATRICES`
 
@@ -36,6 +36,16 @@
 #define BLA_NO_MATRICES
 #endif
 
+#ifdef __has_extension
+#if !__has_extension(c_generic_selections)
+#define BLA_NO_GENERICS
+#endif
+#else
+#if !defined(__STDC__) || !__STDC__ || __STDC_VERSION__ < 201112L
+#define BLA_NO_GENERICS
+#endif
+#endif
+
 #ifndef BLA_HEADER
 #define BLA_HEADER
 #if defined(__cplusplus)
@@ -43,6 +53,9 @@ extern "C"
 {
 #endif
 
+#ifndef BLA_NO_PRINT
+#include <stdio.h>
+#endif
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
@@ -83,54 +96,38 @@ extern "C"
     X(3)            \
     X(4)
 
-#ifndef BLA_NO_MATRICES
-#define __DEF_BLA_MATRIX(COLUMNS, ROWS) \
-    typedef float mat##COLUMNS##ROWS __attribute__((matrix_type((COLUMNS), (ROWS))));
+#define __DEF_BLA_VECTOR(SZ)                                    \
+    typedef float vec##SZ __attribute__((ext_vector_type(SZ))); \
+    vec##SZ Vec##SZ(float x, ...);                              \
+    vec##SZ vec##SZ##_zero(void);                               \
+    float vec##SZ##_sum(vec##SZ);                               \
+    int vec##SZ##_cmp(vec##SZ, vec##SZ);                        \
+    float vec##SZ##_length_sqr(vec##SZ);                        \
+    float vec##SZ##_length(vec##SZ);                            \
+    float vec##SZ##_dot(vec##SZ, vec##SZ);                      \
+    vec##SZ vec##SZ##_normalize(vec##SZ);                       \
+    float vec##SZ##_distance_sqr(vec##SZ, vec##SZ);             \
+    float vec##SZ##_distance(vec##SZ, vec##SZ);                 \
+    vec##SZ vec##SZ##_clamp(vec##SZ, vec##SZ, vec##SZ);         \
+    vec##SZ vec##SZ##_lerp(vec##SZ, vec##SZ, float);
 
-#define X(N)                           \
-    __DEF_BLA_MATRIX(N, N)             \
-    typedef mat##N##N mat##N;          \
-    mat##N mat##N##_identity(void);    \
-    float mat##N##_trace(mat##N mat);  \
-    mat##N mat##N##_transpose(mat##N); \
-    mat##N Mat##N(void);
-    __BLA_TYPES
+#define X(N) \
+    __DEF_BLA_VECTOR(N)
+__BLA_TYPES
 #undef X
-#endif
-
-#define __DEF_BLA_VECTOR(SIZE) \
-    typedef float vec##SIZE __attribute__((ext_vector_type(SIZE)));
+typedef vec4 quat;
+typedef vec4 color;
 
 #define __DEF_BLA_IVECTOR(TYPE, SIZE) \
-    typedef int int##SIZE __attribute__((vector_size(SIZE * sizeof(TYPE))));
+    typedef int vec##SIZE##i __attribute__((vector_size(SIZE * sizeof(TYPE))));
 
 #define BLA_IVECTOR_TYPE_DEFAULT int
 #ifndef BLA_IVECTOR_TYPE
 #define BLA_IVECTOR_TYPE BLA_IVECTOR_TYPE_DEFAULT
 #endif
 #define X(N) __DEF_BLA_IVECTOR(int, N)
+__BLA_TYPES
 #undef X
-
-#define __DEF_BLA_VECTOR_FUNCS(NAME)       \
-    NAME NAME##_zero(void);                \
-    float NAME##_sum(NAME);                \
-    int NAME##_cmp(NAME, NAME);            \
-    float NAME##_length_sqr(NAME);         \
-    float NAME##_length(NAME);             \
-    float NAME##_dot(NAME, NAME);          \
-    NAME NAME##_normalize(NAME);           \
-    float NAME##_distance_sqr(NAME, NAME); \
-    float NAME##_distance(NAME, NAME);     \
-    NAME NAME##_clamp(NAME, NAME, NAME);   \
-    NAME NAME##_lerp(NAME, NAME, float);
-
-#define X(N)            \
-    __DEF_BLA_VECTOR(N) \
-    __DEF_BLA_VECTOR_FUNCS(vec##N)
-    __BLA_TYPES
-#undef X
-typedef vec4 quat;
-typedef vec4 color;
 
 #define EVAL0(...) __VA_ARGS__
 #define EVAL1(...) EVAL0(EVAL0(EVAL0(__VA_ARGS__)))
@@ -170,6 +167,23 @@ typedef vec4 color;
 
 #define SWZL_MAP(V, VEC) VEC.V
 #define swizzle(V, ...) {MAP_LIST_UD(SWZL_MAP, V, __VA_ARGS__)}
+
+#ifndef BLA_NO_MATRICES
+#define __DEF_BLA_MATRIX(COLUMNS, ROWS) \
+    typedef float mat##COLUMNS##ROWS __attribute__((matrix_type((COLUMNS), (ROWS))));
+
+#define X(N)                                      \
+    __DEF_BLA_MATRIX(N, N)                        \
+    typedef mat##N##N mat##N;                     \
+    mat##N Mat##N(void);                          \
+    mat##N mat##N##_identity(void);               \
+    float mat##N##_trace(mat##N mat);             \
+    mat##N mat##N##_transpose(mat##N);            \
+    vec##N mat##N##_column(mat##N, unsigned int); \
+    vec##N mat##N##_row(mat##N, unsigned int);
+__BLA_TYPES
+#undef X
+#endif
 
 float vec2_angle(vec2 v1, vec2 v2);
 vec2 vec2_rotate(vec2 v, float angle);
@@ -241,41 +255,71 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t, float t, float b, float c
 
 #ifdef BLA_IMPLEMENTATION
 #ifndef BLA_NO_MATRICES
-#define X(N)                                      \
-    mat##N Mat##N(void)                           \
-    {                                             \
-        mat##N mat;                               \
-        memset(&mat, 0, sizeof(float) * (N * N)); \
-        return mat;                               \
-    }                                             \
-    mat##N mat##N##_identity(void)                \
-    {                                             \
-        mat##N mat = Mat##N();                    \
-        for (int i = 0; i < N; i++)               \
-            mat[i][i] = 1.f;                      \
-        return mat;                               \
-    }                                             \
-    float mat##N##_trace(mat##N mat)              \
-    {                                             \
-        float result = 0.f;                       \
-        for (int i = 0; i < N; i++)               \
-            result += mat[i][i];                  \
-        return result;                            \
-    }                                             \
-    mat##N mat##N##_transpose(mat##N mat)         \
-    {                                             \
-        mat##N result = Mat##N();                 \
-        for (int x = 0; x < N; x++)               \
-            for (int y = 0; y < N; y++)           \
-                result[x][y] = mat[y][x];         \
-        return result;                            \
+#define X(N)                                                \
+    mat##N Mat##N(void)                                     \
+    {                                                       \
+        mat##N mat;                                         \
+        memset(&mat, 0, sizeof(float) * (N * N));           \
+        return mat;                                         \
+    }                                                       \
+    mat##N mat##N##_identity(void)                          \
+    {                                                       \
+        mat##N mat = Mat##N();                              \
+        for (int i = 0; i < N; i++)                         \
+            mat[i][i] = 1.f;                                \
+        return mat;                                         \
+    }                                                       \
+    float mat##N##_trace(mat##N mat)                        \
+    {                                                       \
+        float result = 0.f;                                 \
+        for (int i = 0; i < N; i++)                         \
+            result += mat[i][i];                            \
+        return result;                                      \
+    }                                                       \
+    mat##N mat##N##_transpose(mat##N mat)                   \
+    {                                                       \
+        mat##N result = Mat##N();                           \
+        for (int x = 0; x < N; x++)                         \
+            for (int y = 0; y < N; y++)                     \
+                result[x][y] = mat[y][x];                   \
+        return result;                                      \
+    }                                                       \
+    vec##N mat##N##_column(mat##N mat, unsigned int column) \
+    {                                                       \
+        vec##N result = vec##N##_zero();                    \
+        if (column >= N)                                    \
+            return result;                                  \
+        for (int i = 0; i < N; i++)                         \
+            result[i] = mat[i][column];                     \
+        return result;                                      \
+    }                                                       \
+    vec##N mat##N##_row(mat##N mat, unsigned int row)       \
+    {                                                       \
+        vec##N result = vec##N##_zero();                    \
+        if (row >= N)                                       \
+            return result;                                  \
+        for (int i = 0; i < N; i++)                         \
+            result[i] = mat[row][i];                        \
+        return result;                                      \
     }
-
 __BLA_TYPES
 #undef X
 #endif // BLA_NO_MATRICES
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvarargs"
 #define X(N)                                                  \
+    vec##N Vec##N(float x, ...)                               \
+    {                                                         \
+        va_list args;                                         \
+        va_start(args, N - 1);                                \
+        vec##N v;                                             \
+        v[0] = x;                                             \
+        for (int i = 0; i < N - 1; i++)                       \
+            v[i + 1] = (float)va_arg(args, double);           \
+        va_end(args);                                         \
+        return v;                                             \
+    }                                                         \
     vec##N vec##N##_zero(void)                                \
     {                                                         \
         return (vec##N){0};                                   \
@@ -336,6 +380,46 @@ __BLA_TYPES
     }
 __BLA_TYPES
 #undef X
+#pragma clang diagnostic pop
+
+#ifndef BLA_NO_PRINT
+#define X(N)                                \
+    void mat##N##_print(mat##N mat)         \
+    {                                       \
+        for (int x = 0; x < N; x++)         \
+        {                                   \
+            printf("| ");                   \
+            for (int y = 0; y < N; y++)     \
+            {                               \
+                printf("%.2f ", mat[y][x]); \
+            }                               \
+            puts("|");                      \
+        }                                   \
+    }
+__BLA_TYPES
+#undef X
+#define X(N)                        \
+    void vec##N##_print(vec##N vec) \
+    {                               \
+        printf("{ ");               \
+        for (int i = 0; i < N; i++) \
+            printf("%f ", vec[i]);  \
+        puts("}");                  \
+    }
+__BLA_TYPES
+#undef X
+
+#ifndef BLA_NO_GENERICS
+#define bla_print(data) _Generic((data), \
+    vec2: vec2_print,                    \
+    vec3: vec3_print,                    \
+    vec4: vec4_print,                    \
+    mat2: mat2_print,                    \
+    mat3: mat3_print,                    \
+    mat4: mat4_print,                    \
+    default: printf("Unsupported type\n"))(data)
+#endif
+#endif
 
 float vec2_angle(vec2 v1, vec2 v2) {
     return atan2f(v2.y, v2.x) - atan2f(v1.y, v1.x);
@@ -1005,7 +1089,6 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, fl
             }
         case BLA_EASING_SINE:
             switch (type) {
-                default:
                 case EASE_IN:
                     return ease_sine_in(t, b, c, d);
                 case EASE_OUT:
@@ -1015,7 +1098,6 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, fl
             };
         case BLA_EASING_CIRCULAR:
             switch (type) {
-                default:
                 case EASE_IN:
                     return ease_circ_in(t, b, c, d);
                 case EASE_OUT:
@@ -1025,7 +1107,6 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, fl
             };
         case BLA_EASING_CUBIC:
             switch (type) {
-                default:
                 case EASE_IN:
                     return ease_cubic_in(t, b, c, d);
                 case EASE_OUT:
@@ -1035,7 +1116,6 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, fl
             };
         case BLA_EASING_QUAD:
             switch (type) {
-                default:
                 case EASE_IN:
                     return ease_quad_in(t, b, c, d);
                 case EASE_OUT:
@@ -1045,7 +1125,6 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, fl
             };
         case BLA_EASING_EXPONENTIAL:
             switch (type) {
-                default:
                 case EASE_IN:
                     return ease_expo_in(t, b, c, d);
                 case EASE_OUT:
@@ -1055,7 +1134,6 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, fl
             };
         case BLA_EASING_BACK:
             switch (type) {
-                default:
                 case EASE_IN:
                     return ease_back_in(t, b, c, d);
                 case EASE_OUT:
@@ -1065,7 +1143,6 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, fl
             };
         case BLA_EASING_BOUNCE:
             switch (type) {
-                default:
                 case EASE_IN:
                     return ease_bounce_in(t, b, c, d);
                 case EASE_OUT:
@@ -1075,7 +1152,6 @@ float easing(enum bla_easing_fn fn, enum bla_easing_t type, float t, float b, fl
             };
         case BLA_EASING_ELASTIC:
             switch (type) {
-                default:
                 case EASE_IN:
                     return ease_elastic_in(t, b, c, d);
                 case EASE_OUT:
