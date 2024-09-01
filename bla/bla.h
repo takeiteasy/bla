@@ -383,6 +383,7 @@ __BLA_TYPES
 #pragma clang diagnostic pop
 
 #ifndef BLA_NO_PRINT
+#ifndef BLA_NO_MATRICES
 #define X(N)                                \
     void mat##N##_print(mat##N mat)         \
     {                                       \
@@ -408,8 +409,10 @@ __BLA_TYPES
     }
 __BLA_TYPES
 #undef X
+#endif // BLA_NO_MATRICES
 
 #ifndef BLA_NO_GENERICS
+#ifndef BLA_NO_MATRICES
 #define bla_print(data) _Generic((data), \
     vec2: vec2_print,                    \
     vec3: vec3_print,                    \
@@ -418,8 +421,15 @@ __BLA_TYPES
     mat3: mat3_print,                    \
     mat4: mat4_print,                    \
     default: printf("Unsupported type\n"))(data)
-#endif
-#endif
+#else
+#define bla_print(data) _Generic((data), \
+    vec2: vec2_print,                    \
+    vec3: vec3_print,                    \
+    vec4: vec4_print,                    \
+    default: printf("Unsupported type\n"))(data)
+#endif // BLA_NO_MATRICES
+#endif // BLA_NO_GENERICS
+#endif // BLA_NO_PRINT
 
 float vec2_angle(vec2 v1, vec2 v2) {
     return atan2f(v2.y, v2.x) - atan2f(v1.y, v1.x);

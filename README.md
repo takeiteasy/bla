@@ -5,12 +5,17 @@
 
 ### Basic Linear Algebra library
 
-`bla` is a single-header linear algebra library geared towards game development. bla has been designed to be similar (as possible) to glsl.
+`bla` is a pure C, single-header, linear algebra library, geared towards game development.
+
+bla has been designed to be similar (as possible) to glsl. Like in glsl, matrix and vector types support operators. So `vec + vec` or `mat * mat` all work. Also included is a `swizzle` macro, that mimics glsl [vector swizzling](https://en.wikipedia.org/wiki/Swizzling_(computer_graphics)).
+
+bla relies on the clang+gcc language extensions to work. Please check if your compiler has support for [Matrix Types](https://clang.llvm.org/docs/LanguageExtensions.html#matrix-types) and [Vectors](https://clang.llvm.org/docs/LanguageExtensions.html#vectors-and-extended-vectors) extensions. For matrices to work you will need to pass the `-fenable-matrix` opt. If you don't want to do that define `BLA_NO_MATRICES` before including.
 
 ```c
 #define BLA_IMPLEMENTATION // Enables the implementation (only decalre once)
 // #define BLA_NO_MATRICES // Disables matrix support
 // #define BLA_NO_PRINT // Disables printing functions
+// #define BLA_NO_GENERICS // Disable _Generic support (for bla_print)
 #include "bla.h"
 
 vec4 v = Vec4(1, 2, 3, 4);
@@ -24,10 +29,10 @@ bla_print(y);
 // swizzle(vector, ...) translates the args to { ... }
 // so you can convert this to either another vector
 // or a float array quite easily.
-// So for this example, swizzle(v, x, y) -> {v.x, v.y}
-vec2 xy = swizzle(v, x, y);
-bla_print(xy);
-> { 1.00 2.00 }
+// So for this example, swizzle(v, y, x) -> {v.y, v.x, v.w}
+vec3 yxw = swizzle(v, y, x, w);
+bla_print(yxw);
+> { 2.0 1.0 4.0 }
 
 mat4 mat = mat4_identity();
 bla_print(mat);
@@ -40,10 +45,6 @@ mat4 m = mat4_identity() * mat4_translate(Vec3(...));
 mat4 p = o * m;
 ```
 
-bla relies on the clang+gcc language extensions to work. Please check if your compiler has support for [Matrix Types](https://clang.llvm.org/docs/LanguageExtensions.html#matrix-types) and [Vectors](https://clang.llvm.org/docs/LanguageExtensions.html#vectors-and-extended-vectors) extensions.
-
-For matrices to work you will need to pass the `-fenable-matrix` opt. If you don't want to do that define `BLA_NO_MATRICES` before including.
-
 ## TODO
 
 - [ ] Create some actual tests
@@ -53,6 +54,7 @@ For matrices to work you will need to pass the `-fenable-matrix` opt. If you don
 ## Acknowledgements
 
 - Most of the matrix + vector functions, as well as the easing functions were all hand ported from [raymath.h](https://github.com/raysan5/raylib/blob/master/src/raymath.h)
+- Swizzle macro is based off the [map-macro](https://github.com/swansontec/map-macro) project (really cool I use this a lot)
 
 ## LICENSE
 ```
