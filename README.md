@@ -1,7 +1,7 @@
 # bla
 
 > [!WARNING]
-> Work in progress
+> Development moved to [fungl](https://github.com/takeiteasy/fungl) -- this repo is abandoned
 
 ### Basic Linear Algebra library
 
