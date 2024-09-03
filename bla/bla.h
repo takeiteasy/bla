@@ -49,8 +49,7 @@
 #ifndef BLA_HEADER
 #define BLA_HEADER
 #if defined(__cplusplus)
-extern "C"
-{
+extern "C" {
 #endif
 
 #ifndef BLA_NO_PRINT
@@ -226,6 +225,7 @@ mat4 mat4_scale(vec3 scale);
 mat4 frustum(float left, float right, float bottom, float top, float near, float far);
 mat4 perspective(float fovY, float aspect, float nearPlane, float farPlane);
 mat4 ortho(float left, float right, float bottom, float top, float nearPlane, float farPlane);
+mat4 look_at(vec3 center, vec3 target, vec3 up);
 #endif
 
 enum bla_easing_fn {
@@ -864,7 +864,7 @@ mat4 ortho(float left, float right, float bottom, float top, float nearPlane, fl
     return result;
 }
 
-mat4 lookat(vec3 eye, vec3 target, vec3 up) {
+mat4 look_at(vec3 eye, vec3 target, vec3 up) {
     vec3 vz = vec3_normalize(eye - target);
     vec3 vx = vec3_normalize(vec3_cross(up, vz));
     vec3 vy = vec3_cross(vz, vx);

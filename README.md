@@ -1,8 +1,5 @@
 # bla
 
-> [!WARNING]
-> Development moved to [fungl](https://github.com/takeiteasy/fungl) -- this repo is abandoned
-
 ### Basic Linear Algebra library
 
 `bla` is a pure C, single-header, linear algebra library, geared towards game development.
