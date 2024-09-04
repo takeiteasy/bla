@@ -1,5 +1,8 @@
 # bla
 
+> [!WARNING]
+> Work in progress, expect bugs and api changes
+
 ### Basic Linear Algebra library
 
 `bla` is a pure C, single-header, linear algebra library, geared towards game development.
